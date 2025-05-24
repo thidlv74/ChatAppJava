@@ -25,7 +25,7 @@ public class RegisterForm extends JFrame {
     
     private void initComponents() {
         setTitle("Đăng Ký - Chat App");
-        setSize(500, 750);
+        setSize(1000, 900);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setResizable(false);
@@ -44,12 +44,12 @@ public class RegisterForm extends JFrame {
         gbc.anchor = GridBagConstraints.CENTER;
         
         // Logo/Icon
-        JLabel logoLabel = new JLabel("🚀");
-        logoLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 48));
-        logoLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        mainContainer.add(logoLabel, gbc);
+//        JLabel logoLabel = new JLabel("🚀");
+//        logoLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 48));
+//        logoLabel.setHorizontalAlignment(SwingConstants.CENTER);
+//        gbc.gridx = 0;
+//        gbc.gridy = 0;
+//        mainContainer.add(logoLabel, gbc);
         
         // Title
         JLabel titleLabel = new JLabel("Tạo tài khoản mới");
@@ -79,7 +79,7 @@ public class RegisterForm extends JFrame {
         formGbc.insets = new Insets(0, 0, 20, 0);
         
         // Username field
-        JLabel usernameLabel = new JLabel("Tên đăng nhập");
+        JLabel usernameLabel = new JLabel("Tên người dùng");
         usernameLabel.setFont(UIUtils.LABEL_FONT);
         usernameLabel.setForeground(UIUtils.TEXT_PRIMARY);
         formGbc.gridx = 0;
@@ -88,7 +88,7 @@ public class RegisterForm extends JFrame {
         formGbc.insets = new Insets(0, 0, 8, 0);
         formCard.add(usernameLabel, formGbc);
         
-        txtUsername = UIUtils.createStyledTextField("Chọn tên đăng nhập");
+        txtUsername = UIUtils.createStyledTextField("Chọn tên người dùng");
         formGbc.gridy = 1;
         formGbc.anchor = GridBagConstraints.CENTER;
         formGbc.insets = new Insets(0, 0, 20, 0);

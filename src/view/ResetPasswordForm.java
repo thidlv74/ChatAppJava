@@ -22,7 +22,7 @@ public class ResetPasswordForm extends JFrame {
     
     private void initComponents() {
         setTitle("Quên Mật Khẩu - Chat App");
-        setSize(500, 550);
+        setSize(1000, 700);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setResizable(false);
@@ -41,12 +41,12 @@ public class ResetPasswordForm extends JFrame {
         gbc.anchor = GridBagConstraints.CENTER;
         
         // Logo/Icon
-        JLabel logoLabel = new JLabel("🔑");
-        logoLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 48));
-        logoLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        mainContainer.add(logoLabel, gbc);
+//        JLabel logoLabel = new JLabel("🔑");
+//        logoLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 48));
+//        logoLabel.setHorizontalAlignment(SwingConstants.CENTER);
+//        gbc.gridx = 0;
+//        gbc.gridy = 0;
+//        mainContainer.add(logoLabel, gbc);
         
         // Title
         JLabel titleLabel = new JLabel("Quên mật khẩu?");
