@@ -240,6 +240,37 @@ public class UserDAO {
             return false;
         }
     }
+
+    public boolean updateUserLastSeen(int userId) {
+        String query = "UPDATE users SET last_seen = CURRENT_TIMESTAMP WHERE id = ?";
+        
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setInt(1, userId);
+            
+            int rowsUpdated = statement.executeUpdate();
+            return rowsUpdated > 0;
+        } catch (SQLException e) {
+            System.err.println("Error updating user last seen: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public User getUserWithCurrentStatus(int userId) {
+        String query = "SELECT * FROM users WHERE id = ?";
+        
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setInt(1, userId);
+            
+            ResultSet resultSet = statement.executeQuery();
+            if (resultSet.next()) {
+                return createUserFromResultSet(resultSet);
+            }
+            return null;
+        } catch (SQLException e) {
+            System.err.println("Error getting user with current status: " + e.getMessage());
+            return null;
+        }
+    }
     
     public List<User> searchUsers(String searchTerm) {
         List<User> users = new ArrayList<>();

@@ -22,11 +22,11 @@ public class FriendRequestDialog extends JDialog {
     private static final Color DANGER_COLOR = new Color(220, 53, 69);
     
     private User currentUser;
-    private JList<Contact> requestsList;
-    private DefaultListModel<Contact> requestsModel;
+    private JPanel requestsContainer;
     private ContactDAO contactDAO;
     private UserDAO userDAO;
     private MainChatWindow parentWindow;
+    private List<Contact> pendingRequests;
     
     public FriendRequestDialog(MainChatWindow parent, User currentUser) {
         super(parent, "Lời Mời Kết Bạn", true);
@@ -34,6 +34,8 @@ public class FriendRequestDialog extends JDialog {
         this.currentUser = currentUser;
         this.contactDAO = new ContactDAO();
         this.userDAO = new UserDAO();
+        
+        System.out.println("FriendRequestDialog created for user: " + currentUser.getDisplayName());
         
         initComponents();
         loadFriendRequests();
@@ -57,26 +59,16 @@ public class FriendRequestDialog extends JDialog {
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
         titleLabel.setBorder(new EmptyBorder(0, 0, 20, 0));
         
-        // Requests panel
-        JPanel requestsPanel = new JPanel(new BorderLayout());
-        requestsPanel.setBackground(DARK_BACKGROUND);
+        // Requests container with scroll
+        requestsContainer = new JPanel();
+        requestsContainer.setLayout(new BoxLayout(requestsContainer, BoxLayout.Y_AXIS));
+        requestsContainer.setBackground(DARK_BACKGROUND);
         
-        requestsModel = new DefaultListModel<>();
-        requestsList = new JList<>(requestsModel);
-        requestsList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        requestsList.setCellRenderer(new FriendRequestCellRenderer());
-        requestsList.setBackground(DARK_BACKGROUND);
-        requestsList.setForeground(TEXT_COLOR);
-        requestsList.setSelectionBackground(DARK_SECONDARY);
-        requestsList.setSelectionForeground(TEXT_COLOR);
-        requestsList.setFixedCellHeight(80);
-        
-        JScrollPane scrollPane = new JScrollPane(requestsList);
+        JScrollPane scrollPane = new JScrollPane(requestsContainer);
         scrollPane.setBorder(BorderFactory.createLineBorder(DARK_BORDER, 1));
         scrollPane.getViewport().setBackground(DARK_BACKGROUND);
         scrollPane.setPreferredSize(new Dimension(450, 400));
-        
-        requestsPanel.add(scrollPane, BorderLayout.CENTER);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         
         // Button panel
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -93,34 +85,149 @@ public class FriendRequestDialog extends JDialog {
         
         // Add components to main panel
         mainPanel.add(titleLabel, BorderLayout.NORTH);
-        mainPanel.add(requestsPanel, BorderLayout.CENTER);
+        mainPanel.add(scrollPane, BorderLayout.CENTER);
         mainPanel.add(buttonPanel, BorderLayout.SOUTH);
         
         add(mainPanel);
         
         // Add action listeners
-        closeButton.addActionListener(e -> dispose());
+        closeButton.addActionListener(e -> {
+            System.out.println("Close button clicked");
+            dispose();
+        });
     }
     
     private void loadFriendRequests() {
-        requestsModel.clear();
-        List<Contact> pendingRequests = contactDAO.getPendingContactRequests(currentUser.getId());
+        System.out.println("Loading friend requests for user ID: " + currentUser.getId());
+        requestsContainer.removeAll();
         
-        for (Contact request : pendingRequests) {
-            requestsModel.addElement(request);
-        }
+        pendingRequests = contactDAO.getPendingContactRequests(currentUser.getId());
+        System.out.println("Found " + pendingRequests.size() + " pending requests");
         
-        if (requestsModel.isEmpty()) {
-            // Show empty state
+        if (pendingRequests.isEmpty()) {
             JLabel emptyLabel = new JLabel("Không có lời mời kết bạn nào");
             emptyLabel.setForeground(SECONDARY_TEXT);
             emptyLabel.setHorizontalAlignment(SwingConstants.CENTER);
             emptyLabel.setFont(new Font("Arial", Font.ITALIC, 14));
+            emptyLabel.setBorder(new EmptyBorder(50, 0, 50, 0));
+            requestsContainer.add(emptyLabel);
+        } else {
+            for (Contact request : pendingRequests) {
+                System.out.println("Adding request from: " + request.getContactUser().getDisplayName());
+                JPanel requestPanel = createRequestPanel(request);
+                requestsContainer.add(requestPanel);
+                requestsContainer.add(Box.createVerticalStrut(10));
+            }
         }
+        
+        requestsContainer.revalidate();
+        requestsContainer.repaint();
     }
     
-    private void acceptFriendRequest(Contact request) {
+    private JPanel createRequestPanel(Contact request) {
+        User user = request.getContactUser();
+        
+        JPanel panel = new JPanel(new BorderLayout(10, 0));
+        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
+        panel.setBackground(DARK_SECONDARY);
+        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
+        
+        // Avatar
+        JLabel avatarLabel = new JLabel();
+        avatarLabel.setPreferredSize(new Dimension(50, 50));
+        avatarLabel.setOpaque(true);
+        avatarLabel.setBackground(getColorForUser(user.getDisplayName()));
+        avatarLabel.setBorder(BorderFactory.createLineBorder(DARK_BORDER, 1));
+        avatarLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        avatarLabel.setForeground(Color.WHITE);
+        avatarLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        avatarLabel.setText(user.getDisplayName().substring(0, 1).toUpperCase());
+        
+        // User info
+        JPanel infoPanel = new JPanel(new GridLayout(2, 1));
+        infoPanel.setBackground(panel.getBackground());
+        
+        JLabel nameLabel = new JLabel(user.getDisplayName());
+        nameLabel.setForeground(TEXT_COLOR);
+        nameLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        
+        JLabel usernameLabel = new JLabel("@" + user.getUsername() + " muốn kết bạn với bạn");
+        usernameLabel.setForeground(SECONDARY_TEXT);
+        usernameLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        
+        infoPanel.add(nameLabel);
+        infoPanel.add(usernameLabel);
+        
+        // Button panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+        buttonPanel.setBackground(panel.getBackground());
+        
+        JButton acceptButton = new JButton("Chấp nhận");
+        acceptButton.setBackground(SUCCESS_COLOR);
+        acceptButton.setForeground(Color.WHITE);
+        acceptButton.setFocusPainted(false);
+        acceptButton.setBorderPainted(false);
+        acceptButton.setFont(new Font("Arial", Font.BOLD, 12));
+        acceptButton.setPreferredSize(new Dimension(80, 30));
+        
+        JButton rejectButton = new JButton("Từ chối");
+        rejectButton.setBackground(DANGER_COLOR);
+        rejectButton.setForeground(Color.WHITE);
+        rejectButton.setFocusPainted(false);
+        rejectButton.setBorderPainted(false);
+        rejectButton.setFont(new Font("Arial", Font.BOLD, 12));
+        rejectButton.setPreferredSize(new Dimension(80, 30));
+        
+        buttonPanel.add(acceptButton);
+        buttonPanel.add(rejectButton);
+        
+        // Add action listeners
+        acceptButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                System.out.println("Accept button clicked for: " + user.getDisplayName());
+                acceptFriendRequest(request, panel);
+            }
+        });
+        
+        rejectButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                System.out.println("Reject button clicked for: " + user.getDisplayName());
+                rejectFriendRequest(request, panel);
+            }
+        });
+        
+        panel.add(avatarLabel, BorderLayout.WEST);
+        panel.add(infoPanel, BorderLayout.CENTER);
+        panel.add(buttonPanel, BorderLayout.EAST);
+        
+        return panel;
+    }
+    
+    private void acceptFriendRequest(Contact request, JPanel requestPanel) {
+        System.out.println("=== ACCEPT FRIEND REQUEST ===");
+        System.out.println("Current user ID: " + currentUser.getId());
+        System.out.println("Request sender ID: " + request.getContactUser().getId());
+        System.out.println("Request sender name: " + request.getContactUser().getDisplayName());
+        
+        // Show confirmation dialog
+        int confirm = JOptionPane.showConfirmDialog(this, 
+            "Bạn có muốn chấp nhận lời mời kết bạn từ " + request.getContactUser().getDisplayName() + "?", 
+            "Xác nhận", 
+            JOptionPane.YES_NO_OPTION);
+        
+        if (confirm != JOptionPane.YES_OPTION) {
+            System.out.println("User cancelled accept action");
+            return;
+        }
+        
+        // Debug database trước khi chấp nhận
+        contactDAO.debugContactRelationship(currentUser.getId(), request.getContactUser().getId());
+        
         boolean success = contactDAO.acceptContact(currentUser.getId(), request.getContactUser().getId());
+        
+        System.out.println("Accept result: " + success);
         
         if (success) {
             JOptionPane.showMessageDialog(this, 
@@ -128,136 +235,94 @@ public class FriendRequestDialog extends JDialog {
                 "Thành công", 
                 JOptionPane.INFORMATION_MESSAGE);
             
-            // Remove from list
-            requestsModel.removeElement(request);
+            // Remove panel from UI
+            requestsContainer.remove(requestPanel);
+            requestsContainer.revalidate();
+            requestsContainer.repaint();
+            
+            // Debug database sau khi chấp nhận
+            System.out.println("After accepting:");
+            contactDAO.debugContactRelationship(currentUser.getId(), request.getContactUser().getId());
             
             // Refresh parent window
             if (parentWindow != null) {
                 parentWindow.refreshContactList();
             }
+            
+            // Check if no more requests
+            checkIfEmpty();
         } else {
             JOptionPane.showMessageDialog(this, 
-                "Không thể chấp nhận lời mời kết bạn. Vui lòng thử lại sau.", 
+                "Không thể chấp nhận lời mời kết bạn. Vui lòng thử lại sau.\nKiểm tra console để xem chi tiết lỗi.", 
                 "Lỗi", 
                 JOptionPane.ERROR_MESSAGE);
         }
+        
+        System.out.println("=== END ACCEPT ===");
     }
     
-    private void rejectFriendRequest(Contact request) {
+    private void rejectFriendRequest(Contact request, JPanel requestPanel) {
+        System.out.println("=== REJECT FRIEND REQUEST ===");
+        System.out.println("Current user ID: " + currentUser.getId());
+        System.out.println("Request sender ID: " + request.getContactUser().getId());
+        System.out.println("Request sender name: " + request.getContactUser().getDisplayName());
+        
         int confirm = JOptionPane.showConfirmDialog(this, 
             "Bạn có chắc muốn từ chối lời mời kết bạn từ " + request.getContactUser().getDisplayName() + "?", 
             "Xác nhận", 
             JOptionPane.YES_NO_OPTION);
         
-        if (confirm == JOptionPane.YES_OPTION) {
-            boolean success = contactDAO.removeContact(request.getUserId(), currentUser.getId());
+        if (confirm != JOptionPane.YES_OPTION) {
+            System.out.println("User cancelled reject action");
+            return;
+        }
+        
+        boolean success = contactDAO.removeContact(request.getUserId(), currentUser.getId());
+        
+        System.out.println("Reject result: " + success);
+        
+        if (success) {
+            JOptionPane.showMessageDialog(this, 
+                "Đã từ chối lời mời kết bạn từ " + request.getContactUser().getDisplayName(), 
+                "Thành công", 
+                JOptionPane.INFORMATION_MESSAGE);
             
-            if (success) {
-                JOptionPane.showMessageDialog(this, 
-                    "Đã từ chối lời mời kết bạn từ " + request.getContactUser().getDisplayName(), 
-                    "Thành công", 
-                    JOptionPane.INFORMATION_MESSAGE);
-                
-                // Remove from list
-                requestsModel.removeElement(request);
-            } else {
-                JOptionPane.showMessageDialog(this, 
-                    "Không thể từ chối lời mời kết bạn. Vui lòng thử lại sau.", 
-                    "Lỗi", 
-                    JOptionPane.ERROR_MESSAGE);
-            }
+            // Remove panel from UI
+            requestsContainer.remove(requestPanel);
+            requestsContainer.revalidate();
+            requestsContainer.repaint();
+            
+            // Check if no more requests
+            checkIfEmpty();
+        } else {
+            JOptionPane.showMessageDialog(this, 
+                "Không thể từ chối lời mời kết bạn. Vui lòng thử lại sau.", 
+                "Lỗi", 
+                JOptionPane.ERROR_MESSAGE);
+        }
+        
+        System.out.println("=== END REJECT ===");
+    }
+    
+    private void checkIfEmpty() {
+        if (requestsContainer.getComponentCount() == 0) {
+            JLabel emptyLabel = new JLabel("Không có lời mời kết bạn nào");
+            emptyLabel.setForeground(SECONDARY_TEXT);
+            emptyLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            emptyLabel.setFont(new Font("Arial", Font.ITALIC, 14));
+            emptyLabel.setBorder(new EmptyBorder(50, 0, 50, 0));
+            requestsContainer.add(emptyLabel);
+            requestsContainer.revalidate();
+            requestsContainer.repaint();
         }
     }
     
-    // Custom cell renderer for friend requests
-    private class FriendRequestCellRenderer extends DefaultListCellRenderer {
-        @Override
-        public Component getListCellRendererComponent(JList<?> list, Object value, int index, 
-                boolean isSelected, boolean cellHasFocus) {
-            
-            if (!(value instanceof Contact)) {
-                return super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-            }
-            
-            Contact request = (Contact) value;
-            User user = request.getContactUser();
-            
-            JPanel panel = new JPanel(new BorderLayout(10, 0));
-            panel.setBorder(new EmptyBorder(8, 10, 8, 10));
-            
-            if (isSelected) {
-                panel.setBackground(DARK_SECONDARY);
-            } else {
-                panel.setBackground(DARK_BACKGROUND);
-            }
-            
-            // Avatar
-            JLabel avatarLabel = new JLabel();
-            avatarLabel.setPreferredSize(new Dimension(50, 50));
-            avatarLabel.setOpaque(true);
-            avatarLabel.setBackground(getColorForUser(user.getDisplayName()));
-            avatarLabel.setBorder(BorderFactory.createLineBorder(DARK_BORDER, 1));
-            avatarLabel.setHorizontalAlignment(SwingConstants.CENTER);
-            avatarLabel.setForeground(Color.WHITE);
-            avatarLabel.setFont(new Font("Arial", Font.BOLD, 18));
-            avatarLabel.setText(user.getDisplayName().substring(0, 1).toUpperCase());
-            
-            // User info
-            JPanel infoPanel = new JPanel(new GridLayout(2, 1));
-            infoPanel.setBackground(panel.getBackground());
-            
-            JLabel nameLabel = new JLabel(user.getDisplayName());
-            nameLabel.setForeground(TEXT_COLOR);
-            nameLabel.setFont(new Font("Arial", Font.BOLD, 14));
-            
-            JLabel usernameLabel = new JLabel("@" + user.getUsername() + " muốn kết bạn với bạn");
-            usernameLabel.setForeground(SECONDARY_TEXT);
-            usernameLabel.setFont(new Font("Arial", Font.PLAIN, 12));
-            
-            infoPanel.add(nameLabel);
-            infoPanel.add(usernameLabel);
-            
-            // Button panel
-            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
-            buttonPanel.setBackground(panel.getBackground());
-            
-            JButton acceptButton = new JButton("Chấp nhận");
-            acceptButton.setBackground(SUCCESS_COLOR);
-            acceptButton.setForeground(Color.WHITE);
-            acceptButton.setFocusPainted(false);
-            acceptButton.setBorderPainted(false);
-            acceptButton.setFont(new Font("Arial", Font.BOLD, 12));
-            acceptButton.setPreferredSize(new Dimension(80, 30));
-            
-            JButton rejectButton = new JButton("Từ chối");
-            rejectButton.setBackground(DANGER_COLOR);
-            rejectButton.setForeground(Color.WHITE);
-            rejectButton.setFocusPainted(false);
-            rejectButton.setBorderPainted(false);
-            rejectButton.setFont(new Font("Arial", Font.BOLD, 12));
-            rejectButton.setPreferredSize(new Dimension(80, 30));
-            
-            buttonPanel.add(acceptButton);
-            buttonPanel.add(rejectButton);
-            
-            // Add action listeners
-            acceptButton.addActionListener(e -> acceptFriendRequest(request));
-            rejectButton.addActionListener(e -> rejectFriendRequest(request));
-            
-            panel.add(avatarLabel, BorderLayout.WEST);
-            panel.add(infoPanel, BorderLayout.CENTER);
-            panel.add(buttonPanel, BorderLayout.EAST);
-            
-            return panel;
-        }
-        
-        private Color getColorForUser(String name) {
-            // Generate consistent color based on name
-            int hash = name.hashCode();
-            int r = 100 + Math.abs(hash % 100);
-            int g = 100 + Math.abs((hash >> 8) % 100);
-            int b = 100 + Math.abs((hash >> 16) % 100);
-            return new Color(r, g, b);
-        }
+    private Color getColorForUser(String name) {
+        // Generate consistent color based on name
+        int hash = name.hashCode();
+        int r = 100 + Math.abs(hash % 100);
+        int g = 100 + Math.abs((hash >> 8) % 100);
+        int b = 100 + Math.abs((hash >> 16) % 100);
+        return new Color(r, g, b);
     }
 }

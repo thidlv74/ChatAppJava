@@ -96,10 +96,31 @@ public class MessageBubbleRenderer extends JPanel {
     
     @Override
     public Dimension getPreferredSize() {
-        FontMetrics fm = getFontMetrics(new Font("Arial", Font.PLAIN, 14));
-        int messageWidth = fm.stringWidth(message);
-        int lines = 1 + messageWidth / (getWidth() - 40);
-        
-        return new Dimension(getWidth(), 60 + lines * fm.getHeight());
+        int maxWidth = 250;
+        Font font = new Font("Arial", Font.PLAIN, 14);
+        FontMetrics fm = getFontMetrics(font);
+        int lineHeight = fm.getHeight();
+
+        String[] words = message.split("\\s+");
+        StringBuilder line = new StringBuilder();
+        int lineCount = 1;
+
+        for (String word : words) {
+            String testLine = line + word + " ";
+            if (fm.stringWidth(testLine) < maxWidth - 2 * PADDING) {
+                line.append(word).append(" ");
+            } else {
+                line = new StringBuilder(word + " ");
+                lineCount++;
+            }
+        }
+
+        int textHeight = lineCount * lineHeight;
+        int senderHeight = 20;  // Tên người gửi
+        int timeHeight = 15;    // Thời gian
+        int verticalPadding = 30;
+
+        int totalHeight = senderHeight + textHeight + timeHeight + verticalPadding;
+        return new Dimension(maxWidth + 2 * PADDING, totalHeight);
     }
 }
